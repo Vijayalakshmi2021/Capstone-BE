@@ -21,6 +21,10 @@ const userSchema = new Schema({
         type: String,
         required: true,
     },
+    studentId: {
+        type: String,
+        unique: true, // Ensure student ID is unique
+    },
 });
 
 const User = mongoose.model("users", userSchema);
