@@ -1,34 +1,76 @@
-// userController.js
-
+// controllers/userController.js
 const User = require("../models/user");
-
-const generateStudentId = () => {
-    const prefix = 'STU';
-    const randomNum = Math.floor(10000 + Math.random() * 90000); // 5-digit random number
-    const year = new Date().getFullYear().toString().substr(-2); // Last 2 digits of current year
-    return `${prefix}${year}${randomNum}`;
-};
+const nodemailer = require("nodemailer");
+const bcrypt = require("bcrypt");
 
 exports.signup = async (req, res) => {
     try {
-        const { name, email, gender, password } = req.body;
-        const studentId = generateStudentId(); // Generate student ID
-        const user = new User({ name, email, gender, password, studentId }); // Include student ID
+        const { name, email, gender, password, studentID } = req.body;
+
+        // Validate studentID is a 6-digit number
+        if (!/^\d{6}$/.test(studentID)) {
+            return res.status(400).json({ status: "error", message: "Student ID must be a 6-digit number." });
+        }
+        // Check for duplicate student ID
+        const existingUser = await User.findOne({ studentID });
+        if (existingUser) {
+            return res.status(400).json({ status: "error", message: "Student ID already exists." });
+        }
+
+
+        // Hash the password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const user = new User({ name, email, gender, password: hashedPassword, studentID });
         await user.save();
-        res.json({ status: "success", studentId });
+
+
+
+        // Send confirmation email
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+            },
+        });
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'Welcome to SVR Hostel',
+            text: `Hello ${name},\n\nThank you for Registering with us!! \nYour user ID is ${email}. \nYour password is ${password}. \nYour student ID is ${studentID}.\n\nBest Regards,\nThe Team`,
+        };
+
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                console.error('Error sending email:', error);
+            } else {
+                console.log('Email sent:', info.response);
+            }
+        });
+
+        res.json({ status: "success" });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ status: "error", message: error.message });
+        res.status(500).json({ status: "error" });
     }
 };
+
 
 exports.signin = async (req, res) => {
     try {
         const { email, password } = req.body;
         const user = await User.findOne({ email });
-        console.log(user, email);
+
         if (user) {
-            res.json({ status: "success" });
+            // Compare the password with the hashed password
+            const isMatch = await bcrypt.compare(password, user.password);
+            if (isMatch) {
+                res.json({ status: "success" });
+            } else {
+                res.status(401).json({ status: "error", message: "Invalid credentials" });
+            }
         } else {
             res.status(401).json({ status: "error", message: "Invalid credentials" });
         }
@@ -45,18 +87,5 @@ exports.getAllUsers = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ status: "error" });
-    }
-};
-
-exports.Profile = async (req, res) => {
-    try {
-        const user = await User.findById(req.user.id).select('-password'); // Assuming req.user.id is set by an authentication middleware
-        if (!user) {
-            return res.status(404).json({ status: "error", message: "User  not found" });
-        }
-        res.json({ status: "success", user });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ status: "error", message: error.message });
     }
 };

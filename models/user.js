@@ -1,4 +1,4 @@
-// User.js
+// models/user.js
 
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
@@ -21,9 +21,11 @@ const userSchema = new Schema({
         type: String,
         required: true,
     },
-    studentId: {
+    studentID: {
         type: String,
-        unique: true, // Ensure student ID is unique
+        required: true,
+        unique: true,
+        length: 6,
     },
 });
 

@@ -14,6 +14,11 @@ const accommodationSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
+        studentID: {
+            type: String,
+            required: true,
+            length: 6,
+        },
         birthday: {
             type: Date,
             required: true,

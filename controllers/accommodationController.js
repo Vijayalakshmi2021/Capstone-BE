@@ -7,6 +7,7 @@ const createAccommodation = async (req, res) => {
             fname,
             sname,
             fullname,
+            studentID,
             birthday,
             NICnumber,
             telnum,
@@ -32,10 +33,12 @@ const createAccommodation = async (req, res) => {
             confirmationDate,
         } = req.body;
 
+
         const newAccommodation = new Accommodation({
             fname,
             sname,
             fullname,
+            studentID,
             birthday,
             NICnumber,
             telnum,
@@ -61,6 +64,12 @@ const createAccommodation = async (req, res) => {
             confirmationDate,
         });
 
+        // Check if an accommodation already exists for this user
+        const existingAccommodation = await Accommodation.findOne({ studentID });
+
+        if (existingAccommodation) {
+            return res.status(400).json({ message: "You have already submitted your accommodation request." });
+        }
         await newAccommodation.save();
         res.status(201).json(newAccommodation);
     } catch (error) {
